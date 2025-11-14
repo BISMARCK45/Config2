@@ -1,15 +1,8 @@
 {
-    "A": ["B", "C"],
-    "B": ["D", "E"],
-    "C": ["F", "G"],
-    "D": ["H"],
-    "E": ["I"],
-    "F": ["J"],
-    "G": ["K"],
-    "H": [],
-    "I": ["L"],
-    "J": [],
-    "K": ["M"],
-    "L": [],
-    "M": []
+    "App": ["Router", "Auth"],
+    "Router": ["Utils"],
+    "Auth": ["Utils", "Database"],
+    "Database": ["Utils"],
+    "Utils": ["Logger"],
+    "Logger": []
 }
