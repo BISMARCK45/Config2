@@ -1,5 +1,6 @@
 import csv
-
+import json
+import urllib.request
 
 def csv_reader(filename):
     config = {}
@@ -54,6 +55,44 @@ def print_config(config):
         print(f"{key}: {value}")
 
 
+def get_npm_dependencies(package_name, version):
+    try:
+        # Формируем URL для запроса к npm registry
+        url = f"https://registry.npmjs.org/{package_name}/{version}"
+        print(f"Запрашиваем данные по URL: {url}")
+
+        # Делаем HTTP запрос
+        with urllib.request.urlopen(url) as response:
+            data = response.read().decode('utf-8')
+            package_info = json.loads(data)
+
+            # Извлекаем зависимости
+            dependencies = package_info.get('dependencies', {})
+
+            return dependencies
+
+    except urllib.error.HTTPError as e:
+        print(f"Ошибка HTTP: {e.code} - {e.reason}")
+        return {}
+    except urllib.error.URLError as e:
+        print(f"Ошибка URL: {e.reason}")
+        return {}
+    except json.JSONDecodeError as e:
+        print(f"Ошибка парсинга JSON: {e}")
+        return {}
+    except Exception as e:
+        print(f"Неизвестная ошибка: {e}")
+        return {}
+
+
+def print_dependencies(dependencies):
+    if not dependencies:
+        print("Зависимости не найдены")
+        return
+
+    print("\nПрямые зависимости пакета:")
+    for package, version in dependencies.items():
+        print(f"  - {package}: {version}")
 def main():
     filename = "config.csv"
 
@@ -74,6 +113,16 @@ def main():
 
     print_config(config)
 
+    print("\n" + "=" * 50)
+    package_name = config['package_name']
+    version = config.get('package_version', 'latest')  # Если версия не указана, используем 'latest'
+
+    print(f"Получаем зависимости для пакета: {package_name} версия: {version}")
+
+    dependencies = get_npm_dependencies(package_name, version)
+
+    # Выводим зависимости
+    print_dependencies(dependencies)
 
 if __name__ == "__main__":
     main()
