@@ -1,6 +1,5 @@
-package_name,A
+package_name,Utils
 repository_url,test_repo.json
 repository_mode,test
-package_version,1.0.0
 tree_output,true
-max_depth,4
+max_depth,3

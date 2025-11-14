@@ -91,7 +91,21 @@ def build_dependency_graph(start_package, get_deps_func, max_depth):
             if dep not in visited:
                 queue.append((dep, depth + 1))
 
+                if dep not in graph:
+                    graph[dep] = []
+
     return graph
+
+
+def build_reverse_dependencies(graph, target_package):
+    """Строит обратные зависимости - кто зависит от target_package"""
+    reverse_deps = []
+
+    for package, dependencies in graph.items():
+        if target_package in dependencies:
+            reverse_deps.append(package)
+
+    return reverse_deps
 
 
 def detect_cycles(graph):
@@ -127,6 +141,18 @@ def print_dependency_tree(graph, start_package):
         for dep in graph.get(current_package, []):
             queue.append((dep, level + 1))
 
+
+def print_reverse_dependencies(reverse_deps, target_package):
+    """Выводит обратные зависимости"""
+    if not reverse_deps:
+        print(f"\n Пакет '{target_package}' не используется другими пакетами")
+        return
+
+    print(f"\n Обратные зависимости для '{target_package}':")
+    for dependent in reverse_deps:
+        print(f"   {dependent} зависит от {target_package}")
+
+
 def main():
     filename = "config.csv"
     print(f"Читаем конфигурационный файл: {filename}")
@@ -156,10 +182,23 @@ def main():
         print(f"Загружаем тестовый репозиторий из: {test_file}")
         test_repo = load_test_repository(test_file)
 
+        # ДЛЯ ОБРАТНЫХ ЗАВИСИМОСТЕЙ ИСПОЛЬЗУЕМ ПОЛНЫЙ ТЕСТОВЫЙ РЕПОЗИТОРИЙ
+        print(f"\n" + "=" * 50)
+        print("ПОИСК ОБРАТНЫХ ЗАВИСИМОСТЕЙ:")
+        reverse_deps = []
+        for package, dependencies in test_repo.items():
+            if package_name in dependencies:
+                reverse_deps.append(package)
+
+        print_reverse_dependencies(reverse_deps, package_name)
+
+        # Для дерева зависимостей используем обычный BFS
         def get_test_dependencies(package):
             return {dep: "" for dep in test_repo.get(package, [])}
 
         get_deps_func = get_test_dependencies
+        print(f"\nСтроим граф зависимостей (BFS, макс. глубина: {max_depth})...")
+        graph = build_dependency_graph(package_name, get_deps_func, max_depth)
 
     else:
         def get_npm_deps(package):
@@ -169,10 +208,16 @@ def main():
                 return get_npm_dependencies(package, 'latest')
 
         get_deps_func = get_npm_deps
+        print(f"\nСтроим граф зависимостей (BFS, макс. глубина: {max_depth})...")
+        graph = build_dependency_graph(package_name, get_deps_func, max_depth)
 
-    print(f"\nСтроим граф зависимостей (BFS, макс. глубина: {max_depth})...")
-    graph = build_dependency_graph(package_name, get_deps_func, max_depth)
+        # Для remote режима используем построенный граф для обратных зависимостей
+        print(f"\n" + "=" * 50)
+        print("ПОИСК ОБРАТНЫХ ЗАВИСИМОСТЕЙ:")
+        reverse_deps = build_reverse_dependencies(graph, package_name)
+        print_reverse_dependencies(reverse_deps, package_name)
 
+    # Вывод дерева зависимостей
     if config.get('tree_output') == 'true':
         print_dependency_tree(graph, package_name)
     else:
@@ -180,13 +225,14 @@ def main():
         for package, deps in graph.items():
             print(f"  {package} -> {deps}")
 
+    # Проверка циклов
     cycles = detect_cycles(graph)
     if cycles:
-        print(f"\n⚠️  Обнаружены циклические зависимости:")
+        print(f"\n  Обнаружены циклические зависимости:")
         for cycle in cycles:
             print(f"  {' → '.join(cycle)}")
     else:
-        print(f"\n✅ Циклические зависимости не обнаружены")
+        print(f"\n Циклические зависимости не обнаружены")
 
 
 if __name__ == "__main__":
